@@ -12,20 +12,6 @@ Copie `openbor_libretro.dll` para `RetroArch/cores` e
 [Controles, correções e limitações](engine/libretro/README.md) ·
 [Validação](engine/libretro/TESTING.md)
 
-## Compilar no GitHub
-
-Envie os arquivos deste projeto para um repositório GitHub, incluindo `.github`.
-O workflow **Build OpenBOR** executa em pushes, pull requests ou manualmente
-em **Actions → Build OpenBOR → Run workflow**.
-
-Ele instala MSYS2/UCRT64, compila a DLL Windows x64, executa os cinco testes de
-regressão e disponibiliza **OpenBOR-windows-x64** nos artefatos da execução.
-O download contém DLL, arquivo `.info`, documentação, licenças e SHA-256.
-Não precisa de PAKs, tokens extras nem SDKs incluídos no repositório.
-
-O workflow usa [MSYS2 setup](https://github.com/msys2/setup-msys2) e
-[artefatos do GitHub Actions](https://github.com/actions/upload-artifact).
-
 ## Compilar localmente
 
 Instale MSYS2 em `C:/msys64` e execute no terminal **UCRT64**:
