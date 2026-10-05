@@ -1,0 +1,17 @@
+# Local games, preserved upstream files and manual diagnostics
+/Paks/
+*.pak
+/.local-archive/
+/engine/libretro/test-run/
+
+# Generated binaries and build trees
+/dist/
+/engine/libretro/build*/
+/engine/libretro/*.log
+*.o
+*.obj
+*.d
+*.dll
+*.exe
+*.a
+*.pdb

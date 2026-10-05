@@ -1,0 +1,62 @@
+name: Build OpenBOR
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-x64:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install UCRT64 build dependencies
+        uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-SDL2
+            mingw-w64-ucrt-x86_64-libpng
+            mingw-w64-ucrt-x86_64-libvorbis
+            mingw-w64-ucrt-x86_64-libogg
+            mingw-w64-ucrt-x86_64-zlib
+
+      - name: Build, test and package
+        shell: pwsh
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+        run: ./engine/libretro/build.ps1 -MsysRoot $env:MSYS2_LOCATION
+
+      - name: Upload core
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenBOR-windows-x64
+          path: dist/openbor-libretro-win64/
+          if-no-files-found: error
+
+      - name: Upload test diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenBOR-build-diagnostics
+          path: |
+            engine/libretro/build-win64/Testing/Temporary/
+            engine/libretro/build-win64/CMakeFiles/CMakeConfigureLog.yaml
+          if-no-files-found: ignore
