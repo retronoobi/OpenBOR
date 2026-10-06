@@ -25,6 +25,7 @@ static void *frontend_fiber, *engine_fiber;
 static bool converted, stopping, finished, loaded, started;
 static uint64_t clock_us, interval_us;
 static unsigned timer_offset, width = 320, height = 240;
+static float display_aspect = 4.0f / 3.0f;
 static unsigned audio_rate = 44100, audio_bits = 16, audio_remainder;
 static bool audio_active;
 static bool trace_enabled;
@@ -44,11 +45,15 @@ s_joysticks joysticks[4];
 static void yield_frame(void)
 {
     SwitchToFiber(frontend_fiber);
-    if(stopping) borShutdown(0, "Content unloaded by libretro.\n");
+    if(stopping) {
+        libretro_webm_close();
+        borShutdown(0, "Content unloaded by libretro.\n");
+    }
 }
 
 void borExit(int status)
 {
+    libretro_webm_close();
     if(logger) logger(status ? RETRO_LOG_ERROR : RETRO_LOG_INFO, "OpenBOR stopped (%d).\n", status);
     finished = true;
     for(;;) SwitchToFiber(frontend_fiber);
@@ -82,7 +87,7 @@ void retro_get_system_info(struct retro_system_info *info)
 {
     memset(info, 0, sizeof(*info));
     info->library_name = "OpenBOR";
-    info->library_version = "7533-libretro-r4";
+    info->library_version = "7533-libretro-r6";
     info->valid_extensions = "pak";
     info->need_fullpath = true;
     info->block_extract = false;
@@ -94,7 +99,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
     info->geometry.base_height = height;
     info->geometry.max_width = 1920;
     info->geometry.max_height = 1080;
-    info->geometry.aspect_ratio = (float)width / height;
+    info->geometry.aspect_ratio = display_aspect;
     info->timing.fps = 60.0;
     info->timing.sample_rate = audio_rate;
 }
@@ -197,7 +202,7 @@ void retro_run(void)
     audio_remainder %= 60;
     if(frames > 2048) frames = 2048;
     memset(samples, 0, frames * 4);
-    if(audio_active && !finished) {
+    if(!finished && !libretro_webm_audio(samples, frames, audio_rate) && audio_active) {
         update_sample((unsigned char *)samples, frames * 2 * (audio_bits / 8));
         if(audio_bits == 8) for(int i = (int)frames * 2 - 1; i >= 0; --i) samples[i] = (((unsigned char *)samples)[i] - 128) * 256;
     }
@@ -225,11 +230,31 @@ int video_set_mode(s_videomodes mode)
     uint32_t *buffer = realloc(framebuffer, pixels * 4);
     if(!buffer) return 0;
     framebuffer = buffer; framebuffer_pixels = pixels;
+    display_aspect = (float)width / height;
     memset(framebuffer, 0, pixels * 4);
     struct retro_system_av_info av;
     retro_get_system_av_info(&av);
     environment(RETRO_ENVIRONMENT_SET_GEOMETRY, &av.geometry);
     return 1;
+}
+void libretro_webm_yield(void) { yield_frame(); }
+void libretro_webm_present(const uint32_t *pixels, unsigned w, unsigned h, float aspect)
+{
+    if(!framebuffer || width!=w || height!=h) {
+        s_videomodes mode={0}; mode.hRes=w; mode.vRes=h;
+        if(!video_set_mode(mode)) borShutdown(1,"Cannot allocate WebM framebuffer.\n");
+    }
+    if(display_aspect!=aspect) {
+        display_aspect=aspect;
+        struct retro_game_geometry geometry={w,h,1920,1080,aspect};
+        environment(RETRO_ENVIRONMENT_SET_GEOMETRY,&geometry);
+    }
+    memcpy(framebuffer,pixels,(size_t)w*h*sizeof(uint32_t));
+}
+void libretro_webm_restore_video(void)
+{
+    extern s_videomodes videomodes;
+    video_set_mode(videomodes);
 }
 static unsigned correct(unsigned c)
 {

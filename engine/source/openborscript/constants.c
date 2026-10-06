@@ -14,6 +14,18 @@
 
 #include "scriptcommon.h"
 
+/* Older modules request level-dependent bounds through openborconstant().
+ * Keep these strings during compilation: folding them would freeze the bounds
+ * before playgame applies the current level's z_coords. */
+static int legacy_level_constant(const char *name, LONG *value)
+{
+    if(!stricmp(name,"PLAYER_MIN_Z")) *value=PLAYER_MIN_Z;
+    else if(!stricmp(name,"PLAYER_MAX_Z")) *value=PLAYER_MAX_Z;
+    else if(!stricmp(name,"FRONTPANEL_Z")) *value=FRONTPANEL_Z;
+    else return 0;
+    return 1;
+}
+
 // ===== openborconstant =====
 #define IICMPCONST(x) \
 if(stricmp(#x, constname)==0) {\
@@ -60,6 +72,7 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ScriptVariant_Init(&v);
         ScriptVariant_ChangeType(&v, VT_INTEGER);
         constname = (char *)StrCache_Get(varlist[0]->strVal);
+        if(legacy_level_constant(constname,&v.lVal)) return 1;
 
         //printf("\n Mapping Openborconstant: %s", constname);
         
@@ -1563,7 +1576,19 @@ HRESULT openbor_transconst(ScriptVariant **varlist , ScriptVariant **pretvar, in
     static char buf[128];
     if(paramCount < 1)
     {
-        goto transconst_error;
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+
+    if(varlist[0]->vt == VT_STR)
+    {
+        LONG value;
+        if(legacy_level_constant(StrCache_Get(varlist[0]->strVal),&value))
+        {
+            ScriptVariant_ChangeType(*pretvar,VT_INTEGER);
+            (*pretvar)->lVal=value;
+            return S_OK;
+        }
     }
 
     //if(varlist[0]->vt == VT_INTEGER) printf("debug: mapstring for openborconstant works!\n");

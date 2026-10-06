@@ -981,6 +981,7 @@ static const char *svlist[] =
     "blockade",
     "bossescount",
     "branchname",
+    "cheats",
     "count_enemies",
     "count_entities",
     "count_npcs",
@@ -8384,6 +8385,14 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
 
     switch(index)
     {
+    case SYSTEM_PROPERTY_CHEATS:
+        ScriptVariant_ChangeType(var, VT_INTEGER);
+        var->lVal = !!(global_config.cheats & (CHEAT_OPTIONS_CREDITS_ACTIVE |
+            CHEAT_OPTIONS_ENERGY_ACTIVE | CHEAT_OPTIONS_HEALTH_ACTIVE |
+            CHEAT_OPTIONS_IMPLACABLE_ACTIVE | CHEAT_OPTIONS_LIVES_ACTIVE |
+            CHEAT_OPTIONS_MULTIHIT_ACTIVE | CHEAT_OPTIONS_TOD_ACTIVE));
+        break;
+
     case SYSTEM_PROPERTY_BACKGROUND:
 
         ScriptVariant_ChangeType(var, VT_PTR);
@@ -15415,7 +15424,7 @@ HRESULT openbor_hallfame(ScriptVariant **varlist , ScriptVariant **pretvar, int 
 HRESULT openbor_playwebm(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     LONG temp = 0; //noskip
-    extern int playwebm(char * filename, int noskip); // avoid implicit declaration
+    extern int playwebm(const char * filename, int noskip); // avoid implicit declaration
 
     if(paramCount < 1)
     {

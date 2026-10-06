@@ -30,7 +30,12 @@ static bool env(unsigned cmd, void *data) {
     case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY: *(const char **)data=save_path; return true;
     case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: ((struct retro_log_callback *)data)->log=log_cb; return true;
     case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: return *(enum retro_pixel_format *)data == RETRO_PIXEL_FORMAT_XRGB8888;
-    case RETRO_ENVIRONMENT_SET_GEOMETRY: case RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO: return true;
+    case RETRO_ENVIRONMENT_SET_GEOMETRY: {
+        struct retro_game_geometry *g=data;
+        fprintf(stderr,"[geometry] frame=%u %ux%u aspect=%.4f\n",frames,g->base_width,g->base_height,g->aspect_ratio);
+        return true;
+    }
+    case RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO: return true;
     case RETRO_ENVIRONMENT_SHUTDOWN: shutdown_requested=1; return true;
     default: return false;
     }
@@ -56,7 +61,14 @@ static size_t audio(const int16_t *data,size_t count) {
 }
 static void poll(void) { ++polls; }
 static int16_t input(unsigned port,unsigned device,unsigned index,unsigned id) {
+    if(getenv("OPENBOR_TEST_NO_INPUT")) return 0;
     if(port) return 0;
+    if(getenv("OPENBOR_TEST_BUTTON_CYCLE") && frames>1500) {
+        static const unsigned buttons[]={RETRO_DEVICE_ID_JOYPAD_Y,RETRO_DEVICE_ID_JOYPAD_B,
+            RETRO_DEVICE_ID_JOYPAD_A,RETRO_DEVICE_ID_JOYPAD_X,RETRO_DEVICE_ID_JOYPAD_L,
+            RETRO_DEVICE_ID_JOYPAD_R,RETRO_DEVICE_ID_JOYPAD_START,RETRO_DEVICE_ID_JOYPAD_RIGHT};
+        return id==buttons[(frames/60)%8] && frames%60<5;
+    }
     if(in_game && getenv("OPENBOR_TEST_SWAP")) {
         unsigned button=strcmp(getenv("OPENBOR_TEST_SWAP"),"left")==0 ? RETRO_DEVICE_ID_JOYPAD_L : RETRO_DEVICE_ID_JOYPAD_R;
         return id==button && frames%600>=100 && frames%600<105;

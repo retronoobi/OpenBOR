@@ -46158,6 +46158,11 @@ void borShutdown(int status, char *msg, ...)
 
     shuttingdown = 1;
 
+#if defined(LIBRETRO) && defined(WEBM)
+    /* Close cinematic I/O before the engine tears down the PAK system. */
+    libretro_webm_close();
+#endif
+
     //printf("savedata.logo %d\n", savedata.logo);
 
     va_start(arglist, msg);
@@ -46666,7 +46671,7 @@ playgif_end:
 }
 
 
-#ifdef WEBM
+#if defined(WEBM) && !defined(LIBRETRO)
 // Returns 0 on error, -1 on escape
 int playwebm(const char *path, int noskip)
 {

@@ -17,7 +17,7 @@ Copie `openbor_libretro.dll` para `RetroArch/cores` e
 Instale MSYS2 em `C:/msys64` e execute no terminal **UCRT64**:
 
 ```sh
-pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,pkgconf,SDL2,libpng,libvorbis,libogg,zlib}
+pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,pkgconf,SDL2,libpng,libvorbis,libogg,libvpx,zlib}
 ```
 
 Depois, no PowerShell, a partir da raiz do projeto:

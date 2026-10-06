@@ -1,5 +1,7 @@
 # Engine translation units required by the libretro backend.
 set(SOURCES
+  "${ROOT}/source/webmlib/nestegg/nestegg.c"
+  "${ROOT}/source/webmlib/halloc/halloc.c"
   "${ROOT}/source/adpcmlib/adpcm.c"
   "${ROOT}/source/gamelib/draw.c"
   "${ROOT}/source/gamelib/draw16.c"

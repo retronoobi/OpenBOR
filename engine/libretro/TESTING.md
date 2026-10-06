@@ -1,4 +1,4 @@
-# Validação — revisões r2 a r4 (4–5 de outubro de 2026)
+# Validação — revisões r2 a r5 (4–5 de outubro de 2026)
 
 Windows x64, Release, OpenBOR 4.0 build 7533, revisão 7533-libretro-r2.
 
@@ -50,7 +50,8 @@ Os testes de PCM e mixer não substituem a avaliação auditiva no EmuVR.
 Não foram completados os jogos nem validados controles físicos, quatro jogadores
 simultâneos ou a execução na sala virtual. O ponto exato relatado pelo usuário
 no Retro Gamer Adventure não foi confirmado; a automação passou da primeira fase.
-Save states, rewind, netplay libretro, rumble e WebM não são implementados.
+Na r2, save states, rewind, netplay libretro, rumble e WebM não eram implementados.
+WebM foi acrescentado na r5; os demais recursos continuam indisponíveis.
 
 ## DLL final r2
 
@@ -165,3 +166,77 @@ Compilação local do zero: passou, com cinco testes CTest aprovados.
 Smoke com X-Men: 2.400 quadros, vídeo/áudio presentes, saída 0 e nome `OpenBOR`.
 O workflow GitHub Actions foi preparado, mas não foi executado remotamente
 nesta sessão. Ele chama o mesmo `build.ps1` usado na validação local.
+
+## Revisão r5 — WebM (5 de outubro de 2026)
+
+Player libretro síncrono com nestegg, libvpx e libvorbis. Não depende do relógio
+real nem do mixer SDL: entrega vídeo XRGB8888 e áudio estéreo pelo frontend.
+O áudio é convertido para a frequência de saída do core e limitado a 16 bits;
+100% de volume de música preserva o ganho original do vídeo.
+
+Os seis WebMs do PAK X-Men foram decodificados até o fim, em 1920×1080,
+VP8/Vorbis estéreo 48 kHz. Todos retornaram sucesso:
+
+| Arquivo | Quadros | Duração reproduzida |
+| --- | ---: | ---: |
+| xintro | 2118 | 35,317 s |
+| xko1 | 1205 | 20,100 s |
+| xko2 | 1025 | 17,100 s |
+| xko2a | 281 | 4,717 s |
+| xko3 | 997 | 16,633 s |
+| xko4 | 2134 | 35,600 s |
+
+O frontend mínimo executou a introdução completa diretamente do PAK (2.500
+chamadas de `retro_run`). Em outra execução, pulou cenas, voltou de 1920×1080
+para 396×200 e entrou na fase, incluindo recarga/reset (1.800 + 1.800 quadros).
+A DLL r5 final passou no descarregamento durante o vídeo e reabertura
+(500 + 500 quadros), sem shutdown inesperado. Captura visual de um quadro da
+introdução conferida; evidências locais em `test-run/webm`.
+
+CTest: seis testes aprovados. O novo `webm_regression` usa mídias sintéticas
+incluídas nos fontes e cobre cores, duração/EOF, estéreo, mono, conversão de
+frequência, ganho de 50%, vídeo sem áudio, skip/noskip, arquivo ausente/inválido
+e limpeza ao interromper a reprodução. Não depende de PAKs nem de FFmpeg no CI.
+
+As importações da DLL do motor continuam limitadas a bibliotecas do Windows/UCRT.
+O workflow instala libvpx e mantém a publicação por tags `v*` após os testes.
+O workflow remoto e a reprodução dentro da sala do EmuVR não foram executados
+nesta revisão. A sincronização auditiva no equipamento do usuário ainda deve
+ser conferida. Save state/netplay permanecem para a próxima etapa.
+
+O ZIP de fontes foi extraído em uma pasta independente e compilado do zero;
+os seis testes passaram sem depender da pasta `.local-archive` ou dos PAKs.
+
+## Base do estado nativo — ainda sem save state funcional
+
+`state_codec_regression` passou junto dos seis testes existentes. Exercita o
+cache real de strings, valores de script, referências remapeadas, aliases,
+validação de faixa de inteiros, integridade, truncamento e identidade do PAK.
+Não testa restauração de partidas: ela ainda não foi implementada. O codec
+permanece isolado do core e não altera o comportamento da r5.
+
+O escopo restante e as dependências da restauração estão em `NATIVE_STATE.md`.
+
+## Revisão r6 — Pocket Dimensional Clash 2 (5 de outubro de 2026)
+
+Reproduzido com o PAK original de 81.175.046 bytes em `C:/EmuVR/Games/openbor`.
+A r5 encerrava a carga com status 1: o script `grabscript_complete.c` consultava
+`openborconstant("PLAYER_MIN_Z")`, removido da tabela atual. Depois dessa
+correção, a próxima falha era `openborvariant("cheats")`, também removido.
+
+Restauradas as consultas aos limites Z e `FRONTPANEL_Z`, avaliadas a cada chamada
+para acompanhar a fase atual. Restaurado `cheats` como booleano de trapaças
+ativas, sem considerar os bits que apenas liberam menus. A revisão oficial
+antiga `a9d25aa16f25c88246394b7e5d5eab490cdf5939` confirmou que a propriedade
+consultava `is_cheat_actived()`. Nenhuma alteração no PAK foi necessária.
+
+Teste no frontend mínimo: 7.200 quadros até o tutorial, depois 10.800 quadros
+com ciclo de botões, recarga/reset e outros 10.800 quadros, todos sem shutdown
+inesperado. Capturas mostram o tutorial e o personagem no cenário de treino.
+Não foi completada uma campanha, nem testada esta revisão dentro do EmuVR.
+
+O novo teste de constantes usa o código real e verifica que a compilação não
+congela os limites: muda `PLAYER_MIN_Z`/`PLAYER_MAX_Z` entre duas chamadas e
+confere os resultados, incluindo `FRONTPANEL_Z`, maiúsculas/minúsculas e uma
+constante estática. Os oito testes CTest passaram. A DLL identificada como r6
+também passou no teste de inicialização de 1.800 quadros.

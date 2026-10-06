@@ -49,8 +49,12 @@
 #endif
 
 #ifdef WEBM
+#ifdef LIBRETRO
+#include    "webm.h"
+#else
 #include    "yuv.h"
 #include    "vidplay.h"
+#endif
 #endif
 
 /////////////////////////////////////////////////////////////////////////////

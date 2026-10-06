@@ -93,7 +93,7 @@ void retro_unload_game(void) {
 void retro_deinit(void) { retro_unload_game(); }
 void retro_get_system_info(struct retro_system_info *info) {
     memset(info,0,sizeof(*info)); info->library_name="OpenBOR";
-    info->library_version="7533-libretro-r4"; info->valid_extensions="pak";
+    info->library_version="7533-libretro-r6"; info->valid_extensions="pak";
     info->need_fullpath=true;
 }
 void retro_get_system_av_info(struct retro_system_av_info *info) {

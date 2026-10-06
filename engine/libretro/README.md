@@ -3,7 +3,20 @@
 Core experimental baseado no OpenBOR 4.0 build 7533 desta árvore. A interface
 foi compilada com o `libretro.h` oficial do RetroArch **1.7.5**, tag `v1.7.5`.
 
-Revisão **r4**: corrige trocas sucessivas de personagens via `weaponframe`
+Revisão **r6**: restaura consultas antigas a `PLAYER_MIN_Z`, `PLAYER_MAX_Z`,
+`FRONTPANEL_Z` e `openborvariant("cheats")`. Corrige o encerramento durante a
+compilação dos scripts de Pocket Dimensional Clash 2, sem modificar o PAK.
+Os limites da fase são consultados em tempo de execução; `cheats` indica
+trapaças ativas, e não apenas a disponibilidade do menu.
+Save state/netplay continuam em desenvolvimento e não estão habilitados.
+
+Inclui a **r5**: reproduz vídeos WebM VP8 com áudio Vorbis diretamente do PAK,
+até 1920×1080. O frontend controla o tempo, o vídeo e o áudio; pular cenas
+respeita a opção `noskip` do jogo. Ao terminar, a resolução do jogo é restaurada.
+O áudio do vídeo usa o volume de música (100% = volume original), com conversão
+para a frequência de saída do core. Não requer DLL adicional nem extrair vídeos.
+
+Inclui a **r4**: corrige trocas sucessivas de personagens via `weaponframe`
 (Dungeons & Dragons) e evita a seleção genérica antecipada quando o jogo
 define sua própria seleção após cenas de introdução (Jaspion The Game).
 
@@ -68,7 +81,9 @@ São disponibilizadas quatro portas RetroPad. Remapeie pelo RetroArch:
 - Apenas Windows x64 nesta implementação. O binário usa o UCRT do Windows.
 - PAKs padrão, não criptografados, menores que 2 GiB. O índice do PAK é validado
   antes da inicialização. Arquivos avulsos em `data` não substituem o conteúdo.
-- Vídeos WebM, rumble e controles de teclado internos não estão implementados.
+- WebM: VP8 com Vorbis mono/estéreo, ou sem áudio. VP9, AV1, Opus e vídeos
+  acima de 1080p não são suportados; falhas são registradas no log e a cena retorna.
+- Rumble e controles de teclado internos não estão implementados.
   Cenas normais do OpenBOR e música Ogg/ADPCM permanecem no motor.
 - Validado com os PAKs X-Men Arcade e Retro Gamer Adventure 1.0.3 fornecidos. Isso não garante
   compatibilidade de todos os módulos antigos com o OpenBOR 4.0.
@@ -78,8 +93,8 @@ São disponibilizadas quatro portas RetroPad. Remapeie pelo RetroArch:
 ## Compilação
 
 Requisitos: CMake, MSYS2 UCRT64 com GCC, Ninja, pkg-config, SDL2, libpng,
-libvorbis e libogg. As bibliotecas são vinculadas estaticamente; não é necessário
-distribuir DLLs de SDL, Ogg ou Vorbis ao lado do core.
+libvorbis, libogg e libvpx. As bibliotecas são vinculadas estaticamente; não é
+necessário distribuir DLLs de SDL, Ogg, Vorbis ou libvpx ao lado do core.
 
 ```powershell
 ./engine/libretro/build.ps1 -MsysRoot C:/msys64
