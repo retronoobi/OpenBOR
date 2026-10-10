@@ -65,7 +65,10 @@ jobs:
   release:
     name: Publish Release
     needs: windows-x64
-    if: startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request'
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
+       startsWith(github.ref, 'refs/tags/v'))
     runs-on: windows-2022
     timeout-minutes: 10
     permissions:
@@ -84,12 +87,29 @@ jobs:
           $hash = (Get-FileHash -Algorithm SHA256 openbor-libretro-win64.zip).Hash
           "$hash  openbor-libretro-win64.zip" | Set-Content -Encoding ascii SHA256SUMS.txt
 
-      - name: Publish tagged version
+      - name: Publish tested version
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          SOURCE_REF: ${{ github.ref }}
+          SOURCE_NAME: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          gh release create "$env:RELEASE_TAG" openbor-libretro-win64.zip SHA256SUMS.txt --verify-tag --title "OpenBOR $env:RELEASE_TAG" --generate-notes
+          if ($env:SOURCE_REF.StartsWith('refs/tags/')) {
+            $tag = $env:SOURCE_NAME
+            $tagOptions = @('--verify-tag')
+          } else {
+            $tag = "build-$env:BUILD_NUMBER-$($env:SOURCE_SHA.Substring(0, 7))"
+            $tagOptions = @('--target', $env:SOURCE_SHA)
+          }
+          # Re-running the same build repairs/uploads its assets without
+          # creating another release or moving an existing tag.
+          gh release view "$tag" --json tagName 1>$null 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "$tag" openbor-libretro-win64.zip SHA256SUMS.txt --clobber
+          } else {
+            gh release create "$tag" openbor-libretro-win64.zip SHA256SUMS.txt @tagOptions --title "OpenBOR $tag" --generate-notes
+          }
           if ($LASTEXITCODE) { throw 'Release publication failed.' }
