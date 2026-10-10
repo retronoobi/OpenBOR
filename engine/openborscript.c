@@ -33,6 +33,7 @@
 #include "globals.h"
 #include "ImportCache.h"
 #include "models.h"
+#include "source/openborscript/legacy_dot.h"
 #include "scriptcommon.h"
 
 Varlist global_var_list;
@@ -2154,6 +2155,7 @@ enum entityproperty_enum
     _ep_detect,
     _ep_die_on_landing,
     _ep_direction,
+    _ep_dot,
     _ep_dropframe,
     _ep_edelay,
     _ep_edge,
@@ -2363,6 +2365,7 @@ static const char *eplist[] =
     "detect",
     "die_on_landing",
     "direction",
+    "dot",
     "dropframe",
     "edelay",
     "edge",
@@ -3364,6 +3367,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
 
     switch(propind)
     {
+    case _ep_dot:
+        return legacy_dot_access(ent, varlist, pretvar, paramCount, 0);
     case _ep_a:
     case _ep_y:
     {
@@ -5550,6 +5555,8 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
 
     switch(propind)
     {
+    case _ep_dot:
+        return legacy_dot_access(ent, varlist, pretvar, paramCount, 1);
     case _ep_aggression:
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))

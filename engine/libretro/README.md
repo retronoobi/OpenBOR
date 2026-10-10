@@ -3,12 +3,32 @@
 Core experimental baseado no OpenBOR 4.0 build 7533 desta árvore. A interface
 foi compilada com o `libretro.h` oficial do RetroArch **1.7.5**, tag `v1.7.5`.
 
-Revisão **r6**: restaura consultas antigas a `PLAYER_MIN_Z`, `PLAYER_MAX_Z`,
+Revisão **r10**: aceita a assinatura alternativa de PAK usada em Street of
+Rages X, preservando a validação do índice e dos limites dos arquivos. Expõe
+GLOBAL_CONFIG_PROPERTY_CHEATS como alias da propriedade existente e resolve
+leituras legadas de Paks/<nome>.pak para o conteúdo aberto pelo frontend.
+Não exige renomear o PAK nem colocá-lo na pasta Paks. O alias só afeta leitura;
+nomes com subdiretórios ou caminhos de outras pastas não são redirecionados.
+
+A revisão **r9**: restaura a propriedade antiga `dot` de getentityproperty e
+changeentityproperty, necessária para iniciar Avengers United Battle Force.
+Os efeitos usam a estrutura atual do motor, com os modos e índices antigos.
+Também corrige a leitura de um nó já liberado ao expirar efeitos de dano periódico.
+
+A revisão **r8**: corrige um acesso a memória não inicializada ao restaurar
+a seleção de personagens de um save nativo e restaura a opção antiga de sincronização/
+remoção de efeitos vinculados (`bindentity`, flag 4). Ambos os fechamentos foram
+reproduzidos em Bad Ass Babes Episode one.
+
+A revisão **r7**: corrige a condição de entrada na pose de vitória, que impedia
+o encerramento da fase após derrotar o chefe em jogos como Retro Gamer Adventure 2.
+
+A revisão **r6**: restaura consultas antigas a `PLAYER_MIN_Z`, `PLAYER_MAX_Z`,
 `FRONTPANEL_Z` e `openborvariant("cheats")`. Corrige o encerramento durante a
 compilação dos scripts de Pocket Dimensional Clash 2, sem modificar o PAK.
 Os limites da fase são consultados em tempo de execução; `cheats` indica
 trapaças ativas, e não apenas a disponibilidade do menu.
-Save state/netplay continuam em desenvolvimento e não estão habilitados.
+Save state e netplay não são suportados nesta versão.
 
 Inclui a **r5**: reproduz vídeos WebM VP8 com áudio Vorbis diretamente do PAK,
 até 1920×1080. O frontend controla o tempo, o vídeo e o áudio; pular cenas

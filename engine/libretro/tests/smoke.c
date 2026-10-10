@@ -13,8 +13,24 @@ static FILE *pcm;
 static char save_path[1024];
 static HMODULE core_module;
 static LONG WINAPI exception_log(EXCEPTION_POINTERS *e) {
-    fprintf(stderr,"Exception %lx at core offset 0x%llx\n", e->ExceptionRecord->ExceptionCode,
-        (unsigned long long)((char *)e->ExceptionRecord->ExceptionAddress-(char *)core_module));
+    CONTEXT context=*e->ContextRecord;
+    fprintf(stderr,"Exception %lx frame=%u\n",e->ExceptionRecord->ExceptionCode,frames);
+    for(unsigned i=0;i<20 && context.Rip;++i) {
+        HMODULE module=NULL; char name[MAX_PATH]={0};
+        GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                          (LPCSTR)context.Rip,&module);
+        if(module) GetModuleFileNameA(module,name,sizeof(name));
+        fprintf(stderr,"  %s +0x%llx\n",name,(unsigned long long)(context.Rip-(DWORD64)module));
+        DWORD64 base=0; PRUNTIME_FUNCTION fn=RtlLookupFunctionEntry(context.Rip,&base,NULL);
+        if(fn) {
+            PVOID handler=NULL; DWORD64 frame=0;
+            RtlVirtualUnwind(UNW_FLAG_NHANDLER,base,context.Rip,fn,&context,&handler,&frame,NULL);
+        } else {
+            SIZE_T read=0; DWORD64 address=0;
+            if(!ReadProcessMemory(GetCurrentProcess(),(void*)context.Rsp,&address,sizeof(address),&read) || read!=sizeof(address)) break;
+            context.Rip=address; context.Rsp+=8;
+        }
+    }
     fflush(stderr);
     return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -63,6 +79,8 @@ static void poll(void) { ++polls; }
 static int16_t input(unsigned port,unsigned device,unsigned index,unsigned id) {
     if(getenv("OPENBOR_TEST_NO_INPUT")) return 0;
     if(port) return 0;
+    if(getenv("OPENBOR_TEST_LOAD_SAVE") && !in_game && frames>=1300 && frames<1305)
+        return id==RETRO_DEVICE_ID_JOYPAD_DOWN;
     if(getenv("OPENBOR_TEST_BUTTON_CYCLE") && frames>1500) {
         static const unsigned buttons[]={RETRO_DEVICE_ID_JOYPAD_Y,RETRO_DEVICE_ID_JOYPAD_B,
             RETRO_DEVICE_ID_JOYPAD_A,RETRO_DEVICE_ID_JOYPAD_X,RETRO_DEVICE_ID_JOYPAD_L,

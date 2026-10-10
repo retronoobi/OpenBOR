@@ -11,6 +11,13 @@ void exitIfFalse(int ok,const char *what,const char *fn,const char *file,int lin
 void writeToLogFile(const char *fmt,...) {}
 int main(void)
 {
+    {
+        ScriptVariant arg={0}, result={0}, *args[]={&arg}, *out=&result;
+        arg.vt=VT_STR; arg.strVal=StrCache_CreateNewFrom("GLOBAL_CONFIG_PROPERTY_CHEATS");
+        CHECK(mapstrings_transconst(args,1) && arg.vt==VT_INTEGER && arg.lVal==_GLOBAL_CONFIG_CHEATS);
+        CHECK(openbor_transconst(args,&out,1)==S_OK && result.lVal==_GLOBAL_CONFIG_CHEATS);
+        ScriptVariant_Clear(&arg); ScriptVariant_Clear(&result);
+    }
     const char *names[]={"PLAYER_MIN_Z","PLAYER_MAX_Z","FRONTPANEL_Z","player_min_z"};
     for(unsigned i=0;i<4;++i) {
         ScriptVariant arg,result; ScriptVariant_Init(&arg); ScriptVariant_Init(&result);

@@ -78,6 +78,11 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         
         /* Ai modes. */
         IICMPCONST(AIATTACK1_ALWAYS)
+        /* Public spelling used by modules built for newer script headers. */
+        else if(!stricmp(constname, "GLOBAL_CONFIG_PROPERTY_CHEATS"))
+        {
+            v.lVal = _GLOBAL_CONFIG_CHEATS;
+        }
         ICMPCONST(AIATTACK2_DODGE)
         ICMPCONST(AIATTACK2_DODGEMOVE)
         ICMPCONST(AIATTACK1_LONG)

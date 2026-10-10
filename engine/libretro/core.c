@@ -87,7 +87,7 @@ void retro_get_system_info(struct retro_system_info *info)
 {
     memset(info, 0, sizeof(*info));
     info->library_name = "OpenBOR";
-    info->library_version = "7533-libretro-r6";
+    info->library_version = "7533-libretro-r10";
     info->valid_extensions = "pak";
     info->need_fullpath = true;
     info->block_extract = false;
@@ -133,7 +133,10 @@ static bool setup_paths(const char *path)
 static bool validate_pak(FILE *file)
 {
     unsigned char bytes[MAX_FILENAME_LEN + 12];
-    if(fread(bytes,1,8,file) != 8 || memcmp(bytes,"PACK\0\0\0\0",8)) return false;
+    if(fread(bytes,1,8,file) != 8 || readlsb32(bytes+4) != 0) return false;
+    /* The engine also supports the alternate SORX archive signature. Keep
+     * validating the entire directory and payload bounds for both formats. */
+    if(readlsb32(bytes) != 0x4B434150 && readlsb32(bytes) != 0x7F14111D) return false;
     if(fseek(file,0,SEEK_END)) return false;
     long size = ftell(file);
     if(size < 25 || fseek(file,-4,SEEK_END) || fread(bytes,1,4,file) != 4) return false;

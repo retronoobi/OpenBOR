@@ -938,12 +938,20 @@ static int buffer_file(char *filename, char **pbuffer, size_t *psize)
 }
 
 
+#ifdef LIBRETRO
+#include "libretro/content_path.h"
+#endif
 // returns: 1 - succeeded 0 - failed
 int buffer_pakfile(char *filename, char **pbuffer, size_t *psize)
 {
     int handle;
     *psize = 0;
     *pbuffer = NULL;
+
+#ifdef LIBRETRO
+    if(libretro_is_content_alias(filename))
+        return buffer_file(packfile, pbuffer, psize);
+#endif
 
 #ifndef LIBRETRO
     if(buffer_file(filename, pbuffer, psize) == 1)
@@ -9010,10 +9018,13 @@ void recursive_damage_update(entity* ent)
     s_attack attack = emptyattack;      // Attack structure.
     s_defense* defense_object = NULL;   // Defense properties.
     s_damage_recursive* cursor = NULL;  // Iteration cursor.
+    s_damage_recursive* next = NULL;
 
     /* Iterate target's recursive damage nodes. */
-    for (cursor = ent->recursive_damage; cursor != NULL; cursor = cursor->next)
+    for (cursor = ent->recursive_damage; cursor != NULL; cursor = next)
     {
+        /* Expiration frees cursor. Save the link before releasing the node. */
+        next = cursor->next;
         /*
         * If time has expired, destroy node and exit
         * this loop iteration.
@@ -28795,7 +28806,9 @@ void adjust_bind(entity* acting_entity)
     printf("\n\n");
     */
 
-	if (acting_entity->binding.config & (BIND_CONFIG_ANIMATION_DEFINED | BIND_CONFIG_ANIMATION_TARGET | BIND_CONFIG_ANIMATION_FRAME_DEFINED | BIND_CONFIG_ANIMATION_FRAME_TARGET))
+	/* Legacy bind flag 4 also requests animation matching, with removal
+	 * when the child lacks the target animation. */
+	if (acting_entity->binding.config & (BIND_CONFIG_ANIMATION_DEFINED | BIND_CONFIG_ANIMATION_TARGET | BIND_CONFIG_ANIMATION_FRAME_DEFINED | BIND_CONFIG_ANIMATION_FRAME_TARGET | BIND_CONFIG_ANIMATION_REMOVE))
 	{
 		/* 
         * If a defined value is requested,
@@ -28812,7 +28825,7 @@ void adjust_bind(entity* acting_entity)
 		}
 
 		/* Are we NOT currently playing the target animation? */
-		if (acting_entity->animnum != animation)
+		if (!acting_entity->animation || acting_entity->animnum != animation)
 		{
 			/*
             * If we don't have the target animation
@@ -47153,7 +47166,7 @@ void savelevelinfo()
 void tryvictorypose(entity *ent)
 {
     if( ent &&
-       ent->inpain & ~IN_PAIN_NONE &&
+       ent->inpain == IN_PAIN_NONE &&
        !ent->falling &&
        !(ent->death_state & DEATH_STATE_DEAD) &&
        !ent->rising &&
@@ -47402,10 +47415,10 @@ static void load_select_screen_info(s_savelevel *save)
     for(i = 0; i < save->selectLoadCount; i++)
     {
         s_model *tempmodel;
+        ParseArgs(&arglist, save->selectLoad[i], argbuf);
         command = GET_ARG(0);
 
         if(!command || !command[0]) continue;
-        ParseArgs(&arglist, save->selectLoad[i], argbuf);
 
         tempmodel = findmodel(GET_ARG(1));
         if (tempmodel)

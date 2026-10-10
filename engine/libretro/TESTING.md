@@ -202,20 +202,10 @@ As importações da DLL do motor continuam limitadas a bibliotecas do Windows/UC
 O workflow instala libvpx e mantém a publicação por tags `v*` após os testes.
 O workflow remoto e a reprodução dentro da sala do EmuVR não foram executados
 nesta revisão. A sincronização auditiva no equipamento do usuário ainda deve
-ser conferida. Save state/netplay permanecem para a próxima etapa.
+ser conferida. Save state/netplay não são suportados.
 
 O ZIP de fontes foi extraído em uma pasta independente e compilado do zero;
 os seis testes passaram sem depender da pasta `.local-archive` ou dos PAKs.
-
-## Base do estado nativo — ainda sem save state funcional
-
-`state_codec_regression` passou junto dos seis testes existentes. Exercita o
-cache real de strings, valores de script, referências remapeadas, aliases,
-validação de faixa de inteiros, integridade, truncamento e identidade do PAK.
-Não testa restauração de partidas: ela ainda não foi implementada. O codec
-permanece isolado do core e não altera o comportamento da r5.
-
-O escopo restante e as dependências da restauração estão em `NATIVE_STATE.md`.
 
 ## Revisão r6 — Pocket Dimensional Clash 2 (5 de outubro de 2026)
 
@@ -240,3 +230,103 @@ congela os limites: muda `PLAYER_MIN_Z`/`PLAYER_MAX_Z` entre duas chamadas e
 confere os resultados, incluindo `FRONTPANEL_Z`, maiúsculas/minúsculas e uma
 constante estática. Os oito testes CTest passaram. A DLL identificada como r6
 também passou no teste de inicialização de 1.800 quadros.
+
+## Base r6 restaurada — 6 de outubro de 2026
+
+Código restaurado do pacote fonte r6. O protótipo isolado state_codec e seu
+teste foram retirados. O motor e o backend mantêm o código do pacote r6.
+Save state/netplay não estão em desenvolvimento nesta base.
+
+## Revisão r7 — pose de vitória após chefe
+
+Corrigida a condição de tryvictorypose: o motor exigia inpain diferente de
+IN_PAIN_NONE para iniciar a vitória. Um personagem normal nunca entrava na
+animação e check_victory_pose mantinha endgame em zero, prolongando a câmera
+lenta pós-chefe. A condição agora exige ausência de dor. Permanecem as demais
+restrições: personagem vivo, parado, no chão, sem queda ou levantamento.
+
+O teste usa as funções reais do controlador com o efeito de animação substituído.
+Falhou antes da correção e passou depois. Cobre entrada, espera da animação,
+liberação do encerramento, estados impedidos e ausência de animação de vitória.
+Oito testes aprovados. Inspeção do PAK original RGA2 confirmou poses victory
+sem loop nos personagens. O frontend mínimo executou 18.000 quadros com áudio,
+vídeo e movimento sem shutdown; chegou à primeira fase, mas a automação não
+alcançou o chefe. A transição após esse chefe ainda precisa de teste jogado.
+Nenhuma alteração no PAK e nenhuma mudança de save state foi incluída.
+
+
+## r8 — Carregamento do save nativo
+
+Bad Ass Babes Episode one: com cópias dos arquivos .sav, .s00 e .cfg do usuário,
+o frontend mínimo fechava por acesso inválido no quadro 1502, dentro de
+load_select_screen_info (incorporada em selectplayer pelo compilador).
+O laço consultava GET_ARG antes de ParseArgs inicializar a lista de argumentos.
+Agora cada linha salva é interpretada antes de consultar seus argumentos.
+O mesmo teste carregou a partida e completou 6000 quadros, com áudio e vídeo,
+sem exceção ou shutdown. Os arquivos originais do usuário foram preservados.
+Para reproduzir, use OPENBOR_TEST_LOAD_SAVE=1 no frontend smoke, com os saves
+em OpenBOR sob seu diretório de trabalho e pelo menos 6000 quadros.
+Com OPENBOR_COMBAT_SWEEP=1, o segundo fechamento foi reproduzido no quadro
+2311, na fase street.txt do save. O efeito magic nasce sem animação idle e usa
+bindentity com flag 4. adjust_bind ignorava BIND_CONFIG_ANIMATION_REMOVE ao
+escolher a animação; check_edge recebia o efeito com animation nula.
+A flag de remoção agora participa da seleção da animação, e uma animação nula
+é inicializada mesmo quando animnum já coincide com o destino.
+O teste binding_regression usa o controlador real e cobre flag 4 com animação
+presente/ausente, inicialização sem animação, flag 0 e sincronização de frame
+com flag 6. Nove testes aprovados.
+Referência da API antiga: https://www.chronocrash.com/forum/threads/bindentity-issue.3835/
+
+
+Após ambas as correções, o teste com movimentação/ataques completou 36000
+quadros, com 36000 saídas de vídeo e 35614 lotes de áudio não silencioso,
+shutdown=0. Concluiu street.txt e carregou disco.txt. O teste foi executado
+no frontend mínimo, não na interface do RetroArch/EmuVR.
+
+
+## r9 — Avengers United Battle Force / DOT legado
+
+Reprodução: o PAK original encerrava no quadro 3 com shutdown=1 durante a
+compilação de takedamagescript do Deadpool: propriedade dot não reconhecida.
+O script data/scripts/antivenon.c usa slot 1 e campos owner, force, mode,
+rate e time. A compatibilidade agora acessa os efeitos atuais pelo índice,
+com leitura e escrita nomeada e escrita posicional antiga. Modos 0–5 são
+convertidos para as flags atuais; time mantém o valor absoluto do relógio.
+Slots inválidos são rejeitados e a leitura de slot vazio não aloca memória.
+
+Referência consultada: código oficial OpenBOR, commit
+bbfdbf8298b80b85736fec5e1c88d56ebaedd351, engine/openborscript.c.
+Exemplo do autor do script:
+https://www.chronocrash.com/forum/threads/revert-to-default-palette.2781/
+
+O teste legacy_dot_regression cobre ambas as formas, leitura, índices,
+conversão de modos e isolamento entre slots. dot_expiry_regression exercita
+o controlador real com nós expirados consecutivos seguidos de efeito ativo;
+a travessia guarda o próximo nó antes de liberar o atual. Onze testes passaram.
+O frontend mínimo iniciou a primeira fase (data/levels/fase1.txt) e completou
+7200 quadros, com 7200 saídas de vídeo, 6725 lotes audíveis e shutdown=0.
+Isso valida inicialização e início da partida, não uma campanha completa.
+Nenhum PAK ou save original foi alterado; save state/netplay continuam ausentes.
+
+
+## r10 — Street of Rages X
+
+Três obstáculos reproduzidos em sequência com o PAK original:
+1. O core rejeitava a assinatura 0x7F14111D antes de iniciar o motor. O leitor
+   packfile.c já documenta essa assinatura; a validação do core agora aceita
+   esse identificador e PACK, ambos com versão zero e índice validado.
+2. A compilação falhava em GLOBAL_CONFIG_PROPERTY_CHEATS, agora traduzida
+   para _GLOBAL_CONFIG_CHEATS, sem alterar a configuração ou ativar cheats.
+3. loading.c chama shutdown quando não consegue ler Paks/SORX.pak ou
+   Paks/1.0.0.pak. No backend libretro, a leitura de Paks/<nome>.pak agora
+   resolve para o arquivo selecionado pelo frontend, inclusive com outro nome.
+   Não altera o PAK, os scripts ou o diretório de trabalho.
+
+pak_regression testa as duas assinaturas, versão inválida, índice truncado,
+limites do conteúdo e nomes sem terminador, além do escopo dos aliases de
+caminho. legacy_constants_regression cobre a constante acrescentada.
+Doze testes aprovados. O frontend mínimo reproduziu os vídeos em 1920x1080,
+retornou a 480x272, iniciou data/levels/sor1/st1a.txt e completou 7200 quadros,
+7200 saídas de vídeo e 6521 lotes audíveis, shutdown=0.
+A campanha completa e a interface do EmuVR não foram testadas.
+Saves de teste ficaram separados; nenhum PAK ou save original foi modificado.
